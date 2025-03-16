@@ -1,5 +1,4 @@
 import { execSync } from 'child_process';
-import axios from 'axios';
 import { Command } from 'commander';
 import chalk from 'chalk';
 import Table from 'cli-table3';
@@ -67,24 +66,114 @@ async function getApiKey(): Promise<string> {
   }
 }
 
-// Create authenticated API client
-async function createApiClient() {
+// Create headers for API requests
+async function getHeaders() {
   const key = await getApiKey();
-  return axios.create({
-    baseURL: API_URL,
-    headers: {
-      'Authorization': `Bearer ${key}`,
-      'Content-Type': 'application/json'
+  return {
+    'Authorization': `Bearer ${key}`,
+    'Content-Type': 'application/json'
+  };
+}
+
+// Helper function for API requests
+async function apiRequest<T>(endpoint: string, params?: Record<string, any>): Promise<T> {
+  const headers = await getHeaders();
+  const url = new URL(`${API_URL}${endpoint}`);
+  
+  // Add query parameters
+  if (params) {
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined) {
+        url.searchParams.append(key, String(value));
+      }
+    });
+  }
+  
+  // Check if API debug logging is enabled
+  const isDebugEnabled = process.env.API_DEBUG === '1' || process.env.API_DEBUG === 'true';
+  if (isDebugEnabled) {
+    // Create log directory if it doesn't exist
+    const logDir = path.join(process.cwd(), 'api_log', 'plausible');
+    fs.mkdirSync(logDir, { recursive: true });
+  }
+  
+  try {
+    const response = await fetch(url.toString(), {
+      headers
+    });
+
+    if (!response.ok) {
+      const errorData = await response.text();
+      const error = new Error(`HTTP error! status: ${response.status}, message: ${errorData}`);
+      
+      // Log error if debug is enabled
+      if (isDebugEnabled) {
+        logApiDebug(endpoint, params, null, error);
+      }
+      
+      throw error;
     }
-  });
+
+    const data = await response.json() as T;
+    
+    // Log successful response if debug is enabled
+    if (isDebugEnabled) {
+      logApiDebug(endpoint, params, data);
+    }
+    
+    return data;
+  } catch (error) {
+    if (error instanceof Error) {
+      console.error('Error making request:', error.message);
+    } else {
+      console.error('Error making request:', error);
+      // Log unknown error format if debug is enabled
+      if (isDebugEnabled) {
+        logApiDebug(endpoint, params, null, { message: "Unknown error" });
+      }
+    }
+    throw error;
+  }
+}
+
+// Helper function to log API calls for debugging
+function logApiDebug(endpoint: string, params: any, response: any, error?: any): void {
+  try {
+    // Create a unique filename
+    const hash = require('crypto').createHash('md5')
+      .update(`${endpoint}-${JSON.stringify(params)}-${Date.now()}`)
+      .digest('hex')
+      .substring(0, 8);
+    
+    const timestamp = new Date().toISOString().replace(/:/g, '-');
+    const filename = `${timestamp}_plausible_${endpoint.replace(/\//g, '_')}_${hash}.json`;
+    const filePath = path.join(process.cwd(), 'api_log', 'plausible', filename);
+
+    const logData = {
+      timestamp: new Date().toISOString(),
+      service: 'plausible',
+      endpoint,
+      params,
+      response: error ? null : response,
+      error: error ? {
+        message: error.message,
+        stack: error.stack
+      } : null,
+      success: !error
+    };
+
+    fs.writeFileSync(filePath, JSON.stringify(logData, null, 2));
+    console.log(`📝 API debug log written to: ${filePath}`);
+  } catch (err) {
+    console.error('Error writing API debug log:', err);
+  }
 }
 
 // Get list of sites
 async function getSites() {
-  const client = await createApiClient();
   try {
-    const response = await client.get('/sites');
-    return response.data.sites as PlausibleSite[];
+    const response = await apiRequest<{ sites: PlausibleSite[] }>('/sites');
+    return response.sites;
   } catch (error) {
     console.error('Error fetching sites:', error);
     throw error;
@@ -93,19 +182,16 @@ async function getSites() {
 
 // Get breakdown data
 async function getBreakdown(siteId: string, period: string, property: string, limit: number = 10): Promise<any[]> {
-  const client = await createApiClient();
   try {
-    const response = await client.get('/stats/breakdown', {
-      params: {
-        site_id: siteId,
-        period,
-        property,
-        limit
-      }
+    const response = await apiRequest<BreakdownResult>('/stats/breakdown', {
+      site_id: siteId,
+      period,
+      property,
+      limit
     });
     
-    if (response.data.results) {
-      return response.data.results;
+    if (response.results) {
+      return response.results;
     }
     return [];
   } catch (error) {
@@ -116,21 +202,14 @@ async function getBreakdown(siteId: string, period: string, property: string, li
 
 // Get time series data
 async function getTimeSeries(siteId: string, period: string): Promise<any> {
-  const client = await createApiClient();
   try {
-    const response = await client.get('/stats/timeseries', {
-      params: {
-        site_id: siteId,
-        period
-      }
+    const response = await apiRequest<any>('/stats/timeseries', {
+      site_id: siteId,
+      period
     });
-    return response.data;
+    return response;
   } catch (error) {
-    if (axios.isAxiosError(error)) {
-      console.error('Error fetching time series data:', error.response?.data || error.message);
-    } else {
-      console.error('Error fetching time series data:', error);
-    }
+    console.error('Error fetching time series data:', error);
     throw error;
   }
 }

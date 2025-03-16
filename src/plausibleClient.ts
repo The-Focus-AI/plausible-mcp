@@ -2,11 +2,13 @@ import {
   PlausibleBreakdownParams,
   PlausibleBreakdownResult,
   PlausibleClientConfig,
-} from "./types";
+} from "./types/plausible";
+import { ApiLogger } from "./utils/apiLogger";
 
 export class PlausibleClient {
   private baseUrl: string;
   private headers: HeadersInit;
+  private logger: ApiLogger;
 
   constructor(config: PlausibleClientConfig) {
     this.baseUrl = config.baseUrl || "https://plausible.io/api/v1";
@@ -14,6 +16,7 @@ export class PlausibleClient {
       Authorization: `Bearer ${config.apiKey}`,
       "Content-Type": "application/json",
     };
+    this.logger = new ApiLogger('plausible');
   }
 
   private async request<T>(
@@ -36,17 +39,29 @@ export class PlausibleClient {
 
       if (!response.ok) {
         const errorData = await response.text();
-        throw new Error(
+        const error = new Error(
           `HTTP error! status: ${response.status}, message: ${errorData}`
         );
+        
+        // Log failed API call
+        this.logger.logApiCall(endpoint, params, null, error);
+        
+        throw error;
       }
 
-      return (await response.json()) as T;
+      const data = await response.json() as T;
+      
+      // Log successful API call
+      this.logger.logApiCall(endpoint, params, data);
+      
+      return data;
     } catch (error) {
       if (error instanceof Error) {
         console.error("Error making request:", error.message);
       } else {
         console.error("Error making request:", error);
+        // Log unknown error format
+        this.logger.logApiCall(endpoint, params, null, { message: "Unknown error" });
       }
       throw error;
     }

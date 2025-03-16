@@ -39,3 +39,5 @@ temp/
 .npm/
 .eslintcache
 .prettiercache 
+
+api_log*

@@ -1,10 +1,10 @@
 {
-  "name": "plausible-stats-downloader",
+  "name": "site-management-cli",
   "version": "1.0.0",
-  "description": "Download stats from Plausible.io API",
+  "description": "CLI tool to manage Plausible Analytics and Vercel projects",
   "main": "dist/index.js",
   "bin": {
-    "plausible-stats": "./dist/index.js"
+    "sites-mcp": "./dist/index.js"
   },
   "scripts": {
     "build": "tsc",
