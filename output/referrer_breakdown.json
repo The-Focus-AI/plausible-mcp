@@ -1,0 +1,50 @@
+[
+  {
+    "referrer": "Direct / None",
+    "visitors": 84
+  },
+  {
+    "referrer": "google.com",
+    "visitors": 53
+  },
+  {
+    "referrer": "linkedin.com",
+    "visitors": 11
+  },
+  {
+    "referrer": "android-app://com.google.android.googlequicksearchbox",
+    "visitors": 5
+  },
+  {
+    "referrer": "t.co",
+    "visitors": 5
+  },
+  {
+    "referrer": "yandex.ru",
+    "visitors": 5
+  },
+  {
+    "referrer": "android-app://com.linkedin.android",
+    "visitors": 2
+  },
+  {
+    "referrer": "android-app://org.joinmastodon.android",
+    "visitors": 2
+  },
+  {
+    "referrer": "newsletter.thefocus.ai",
+    "visitors": 2
+  },
+  {
+    "referrer": "github.com",
+    "visitors": 1
+  },
+  {
+    "referrer": "huggingface.co",
+    "visitors": 1
+  },
+  {
+    "referrer": "zany-space-spoon-qv6w9ww9cv6w.github.dev",
+    "visitors": 1
+  }
+]

@@ -1,0 +1,17 @@
+{
+  "meta": {
+    "after": null,
+    "limit": 100,
+    "before": null
+  },
+  "sites": [
+    {
+      "domain": "thefocus.ai",
+      "timezone": "America/New_York"
+    },
+    {
+      "domain": "willschenk.com",
+      "timezone": "US/Eastern"
+    }
+  ]
+}
