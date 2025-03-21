@@ -4,19 +4,24 @@
   "description": "CLI tool to manage Plausible Analytics and Vercel projects",
   "main": "dist/index.js",
   "bin": {
-    "sites-mcp": "./dist/index.js"
+    "sites-mcp": "./dist/index.js",
+    "sites-mcp-server": "./dist/server.js"
   },
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
-    "dev": "ts-node src/index.ts"
+    "dev": "ts-node src/index.ts",
+    "server": "ts-node src/server.ts",
+    "inspector": "npx @modelcontextprotocol/inspector ts-node src/server.ts"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
     "chalk": "^4.1.2",
     "chartscii": "^3.1.0",
     "cli-table3": "^0.6.3",
     "commander": "^11.1.0",
-    "dotenv": "^16.3.1"
+    "dotenv": "^16.3.1",
+    "zod": "^3.22.4"
   },
   "devDependencies": {
     "@types/node": "^20.10.0",
