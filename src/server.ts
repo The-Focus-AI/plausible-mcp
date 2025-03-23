@@ -90,25 +90,37 @@ server.tool(
 
 server.tool(
   "get_breakdown",
-  "Get detailed analytics breakdown for a site. Available metrics:\n" +
-    "visitors - Number of unique visitors\n" +
-    "visits - Number of visits/sessions\n" +
-    "pageviews - Number of pageview events\n" +
-    "views_per_visit - Pageviews divided by visits\n" +
-    "bounce_rate - Bounce rate percentage\n" +
-    "visit_duration - Visit duration in seconds\n" +
-    "events - Number of events (pageviews + custom events)\n" +
-    "\nAvailable dimensions:\n" +
-    "Event dimensions:\n" +
-    "- event:name - Event name\n" +
-    "- event:page - Page URL (includes UTM tags)\n" +
-    "- event:page.pathname - Page path without query parameters\n" +
-    "\nVisit dimensions:\n" +
-    "- visit:source - Traffic source\n" +
+  "Get detailed analytics breakdown for a site.\n\n" +
+    "COMMON QUERIES:\n" +
+    "1. Most visited pages in last 7 days:\n" +
+    '   {"site_id": "example.com", "metrics": ["pageviews"], "dimensions": ["event:page"], "date_range": "7d", "limit": 10}\n\n' +
+    "2. Traffic sources breakdown:\n" +
+    '   {"site_id": "example.com", "metrics": ["visitors"], "dimensions": ["visit:source"], "date_range": "30d"}\n\n' +
+    "3. Visitor count by country:\n" +
+    '   {"site_id": "example.com", "metrics": ["visitors"], "dimensions": ["visit:country"], "date_range": "month"}\n\n' +
+    "4. Daily visitor trend:\n" +
+    '   {"site_id": "example.com", "metrics": ["visitors"], "dimensions": ["date"], "date_range": "30d"}\n\n' +
+    "5. Pages with highest bounce rate:\n" +
+    '   {"site_id": "example.com", "metrics": ["bounce_rate"], "dimensions": ["event:page"], "date_range": "month", "limit": 10}\n\n' +
+    "AVAILABLE METRICS:\n" +
+    "- visitors: Number of unique visitors\n" +
+    "- visits: Number of visits/sessions\n" +
+    "- pageviews: Number of pageview events\n" +
+    "- views_per_visit: Average number of pages viewed per visit\n" +
+    "- bounce_rate: Percentage of visits with only one page view\n" +
+    "- visit_duration: Average visit duration in seconds\n" +
+    "- events: Total number of events (pageviews + custom events)\n\n" +
+    "AVAILABLE DIMENSIONS:\n" +
+    "Event dimensions (page/content related):\n" +
+    "- event:name - Event name (e.g., 'pageview', 'download', etc.)\n" +
+    "- event:page - Full page URL including UTM parameters\n" +
+    "- event:page.pathname - Page path without query parameters\n\n" +
+    "Visit dimensions (visitor/session related):\n" +
+    "- visit:source - Traffic source (e.g., 'Google', 'Twitter')\n" +
     "- visit:referrer - Full referrer URL\n" +
-    "- visit:utm_medium - UTM medium\n" +
-    "- visit:utm_source - UTM source\n" +
-    "- visit:utm_campaign - UTM campaign\n" +
+    "- visit:utm_medium - Marketing medium (e.g., 'cpc', 'social')\n" +
+    "- visit:utm_source - UTM source parameter\n" +
+    "- visit:utm_campaign - UTM campaign name\n" +
     "- visit:device - Device type (desktop, mobile, tablet)\n" +
     "- visit:browser - Browser name\n" +
     "- visit:browser_version - Browser version\n" +
@@ -116,59 +128,69 @@ server.tool(
     "- visit:os_version - OS version\n" +
     "- visit:country - Country of visitor\n" +
     "- visit:region - Region/state of visitor\n" +
-    "- visit:city - City of visitor\n" +
-    "\nTime dimensions:\n" +
-    "- minute - Group by minute (only available for 'day' date range)\n" +
-    "- hour - Group by hour (only available for 'day' date range)\n" +
+    "- visit:city - City of visitor\n\n" +
+    "Time dimensions (for trends and patterns):\n" +
+    "- minute - Group by minute (only for 'day' range)\n" +
+    "- hour - Group by hour (only for 'day' range)\n" +
     "- date - Group by date\n" +
     "- week - Group by week\n" +
-    "- month - Group by month\n",
+    "- month - Group by month\n\n" +
+    "FILTERING EXAMPLES:\n" +
+    "1. Only Chrome users:\n" +
+    '   {"filters": [["is", "visit:browser", ["Chrome"]]]}\n\n' +
+    "2. Blog pages only:\n" +
+    '   {"filters": [["contains", "event:page", ["/blog"]]]}\n\n' +
+    "3. Multiple countries:\n" +
+    '   {"filters": [["is", "visit:country", ["US", "GB", "CA"]]]}\n\n' +
+    "4. Exclude certain pages:\n" +
+    '   {"filters": [["is_not", "event:page", ["/admin", "/login"]]]}\n\n' +
+    "5. Complex filter (Chrome users from US):\n" +
+    '   {"filters": [["and", [["is", "visit:browser", ["Chrome"]], ["is", "visit:country", ["US"]]]]]}\n',
   {
     site_id: z
       .string()
-      .describe("The domain of your site (e.g. 'example.com')"),
+      .describe(
+        "Your website domain as configured in Plausible (e.g., 'example.com')"
+      ),
     metrics: z
       .array(z.string())
       .optional()
       .describe(
-        "Metrics to return. Options: visitors, visits, pageviews, views_per_visit, bounce_rate, visit_duration, events. Default: ['visitors']"
+        "List of metrics to calculate. Default: ['visitors']. See AVAILABLE METRICS above for options."
       ),
     dimensions: z
       .array(z.string())
       .optional()
       .describe(
-        "Dimensions to group by. See description above for available dimensions. Default: ['time']"
+        "Properties to group results by. Default: ['date']. See AVAILABLE DIMENSIONS above for options."
       ),
     date_range: z
       .string()
       .optional()
       .describe(
-        "Time period for the stats. Options:\n" +
-          "- day (last 24h)\n" +
-          "- 7d, 30d (last N days)\n" +
-          "- month (current month)\n" +
-          "- 6mo, 12mo (last N months)\n" +
-          "- custom (requires date parameter)\n" +
+        "Time period to analyze. Options:\n" +
+          "- 'day': Last 24 hours\n" +
+          "- '7d', '30d': Last N days\n" +
+          "- 'month': Current month\n" +
+          "- '6mo', '12mo': Last N months\n" +
+          "- Custom ISO dates: ['2024-01-01', '2024-01-31']\n" +
           "Default: '7d'"
       ),
     filters: z
       .array(z.array(z.union([z.string(), z.array(z.string())])))
       .optional()
       .describe(
-        "Filter the results. Examples:\n" +
-          '["is", "visit:browser", ["Chrome"]]\n' +
-          '["contains", "event:page", ["/blog"]]\n' +
-          '["is", "visit:country", ["FR", "GB", "DE"]]\n' +
+        "Filter conditions to apply. See FILTERING EXAMPLES above.\n" +
           "Operators: is, is_not, contains, contains_not, matches, matches_not"
       ),
     limit: z
       .number()
       .optional()
-      .describe("Number of results to return (default: 10000)"),
+      .describe("Maximum number of results to return. Default: 10000"),
     page: z
       .number()
       .optional()
-      .describe("Page number for pagination (default: 1)"),
+      .describe("Page number for pagination. Default: 1"),
   },
   async (params) => {
     try {

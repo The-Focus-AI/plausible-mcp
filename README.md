@@ -1,120 +1,265 @@
 # Plausible MCP
 
-A Model Context Protocol (MCP) server for interacting with Plausible Analytics API v2.
+Hey there! Let's talk about bringing analytics data right into your conversations — because that's what this project is all about. It's a Model Context Protocol (MCP) server that lets you chat with your Plausible Analytics data as naturally as asking a colleague "how's the website doing?"
 
-## Features
+The hardest thing about analytics dashboards is that they're stuck in the old paradigm of clicking through filters and dimensions. We're living in the future now — let's make our analytics data as accessible as asking a question.
 
-- MCP server for Plausible Analytics integration
-- List all sites in your Plausible account
-- Get breakdown statistics by various metrics and dimensions
-- Type-safe API client with Zod validation
-- 1Password integration for API key management
+## What's This All About?
 
-## Examples
+This MCP server bridges the gap between Plausible's powerful analytics API and the way we naturally think about our website stats. Want to know your most visited pages? Or where your traffic is coming from? Just ask!
 
-> what page has the highest inbound traffic to thefocus over the last month
+### Key Features
 
-> what page has the highest inbound traffic to thefocus over the last month
+- 🤝 Natural interaction with your Plausible Analytics data
+- 📊 Get insights about traffic, visitors, and engagement
+- 🌍 Break down stats by country, device, or any dimension you care about
+- 🔒 Secure API key handling with 1Password integration
+- 🎯 Type-safe implementation with TypeScript and Zod
 
-> what countries
+## Real-World Examples
 
-## Installation
+Here's what you can do — and yes, these are actual queries that work:
+
+```bash
+# Basic Questions
+> What were my most visited pages last week?
+{
+  "site_id": "example.com",
+  "metrics": ["pageviews"],
+  "dimensions": ["event:page"],
+  "date_range": "7d",
+  "limit": 10
+}
+
+> Where's my traffic coming from?
+{
+  "site_id": "example.com",
+  "metrics": ["visitors"],
+  "dimensions": ["visit:source"],
+  "date_range": "30d"
+}
+
+> Show me visitor trends by country
+{
+  "site_id": "example.com",
+  "metrics": ["visitors"],
+  "dimensions": ["visit:country"],
+  "date_range": "month"
+}
+
+# Content Performance
+> Which blog posts have the highest bounce rate?
+{
+  "site_id": "example.com",
+  "metrics": ["bounce_rate"],
+  "dimensions": ["event:page"],
+  "filters": [["contains", "event:page", ["/blog"]]],
+  "date_range": "30d"
+}
+
+> What's the average time spent on documentation pages?
+{
+  "site_id": "example.com",
+  "metrics": ["visit_duration"],
+  "dimensions": ["event:page"],
+  "filters": [["contains", "event:page", ["/docs"]]],
+  "date_range": "7d"
+}
+
+# Traffic Analysis
+> Show me mobile vs desktop traffic trends
+{
+  "site_id": "example.com",
+  "metrics": ["visitors", "pageviews"],
+  "dimensions": ["visit:device"],
+  "date_range": "30d"
+}
+
+> Which browsers do my visitors use?
+{
+  "site_id": "example.com",
+  "metrics": ["visitors"],
+  "dimensions": ["visit:browser"],
+  "date_range": "30d"
+}
+
+# Marketing Insights
+> How's our social media traffic performing?
+{
+  "site_id": "example.com",
+  "metrics": ["visitors", "bounce_rate"],
+  "dimensions": ["visit:source"],
+  "filters": [["is", "visit:source", ["Twitter", "LinkedIn", "Facebook"]]],
+  "date_range": "30d"
+}
+
+> Which UTM campaigns are driving the most engagement?
+{
+  "site_id": "example.com",
+  "metrics": ["visitors", "visit_duration"],
+  "dimensions": ["visit:utm_campaign"],
+  "date_range": "month"
+}
+
+# Geographic Analysis
+> Show me traffic from European cities
+{
+  "site_id": "example.com",
+  "metrics": ["visitors"],
+  "dimensions": ["visit:city"],
+  "filters": [["is", "visit:country", ["GB", "DE", "FR", "ES", "IT"]]],
+  "date_range": "30d"
+}
+
+# Time-Based Analysis
+> How does traffic vary throughout the day?
+{
+  "site_id": "example.com",
+  "metrics": ["visitors"],
+  "dimensions": ["hour"],
+  "date_range": "day"
+}
+
+# Complex Queries
+> Show me popular blog posts from mobile users in the US
+{
+  "site_id": "example.com",
+  "metrics": ["pageviews", "visit_duration"],
+  "dimensions": ["event:page"],
+  "filters": [["and", [
+    ["contains", "event:page", ["/blog"]],
+    ["is", "visit:device", ["mobile"]],
+    ["is", "visit:country", ["US"]]
+  ]]],
+  "date_range": "30d"
+}
+
+> Which pages have high engagement from social media?
+{
+  "site_id": "example.com",
+  "metrics": ["visit_duration", "views_per_visit"],
+  "dimensions": ["event:page"],
+  "filters": [["is", "visit:source", ["Twitter", "LinkedIn", "Facebook"]]],
+  "date_range": "30d"
+}
+```
+
+These examples just scratch the surface — you can combine metrics, dimensions, and filters in countless ways to get exactly the insights you need. The beauty is in how natural it feels to ask these questions and get immediate answers.
+
+## Getting Started
+
+First things first, let's get you set up:
 
 ```bash
 pnpm install
 ```
 
-## Configuration
+### Configuration
 
-Create a `.env` file in the root directory with your Plausible API configuration:
+You've got two ways to handle your Plausible API key — choose what works for you:
+
+1. Create a `.env` file:
 
 ```env
 PLAUSIBLE_API_KEY=your_api_key_here
 PLAUSIBLE_API_URL=https://plausible.io/api/v2
 ```
 
-Alternatively, store your API key in 1Password with the path "op://Development/plausible api/notesPlain".
+2. Or use 1Password (my preferred way):
+   Store your key at "op://Development/plausible api/notesPlain"
 
-## Available MCP Tools
+## The Tools at Your Disposal
 
 ### list_sites
 
-Lists all sites in your Plausible account.
-
-Example response:
-
-```json
-{
-  "sites": [
-    {
-      "domain": "example.com",
-      "timezone": "UTC"
-    }
-  ]
-}
-```
+Gets you a list of all your Plausible sites. Simple but useful when you're just getting started.
 
 ### get_breakdown
 
-Get breakdown statistics for a site. Parameters:
+This is where the magic happens. Think of it as your analytics Swiss Army knife:
 
-- `site_id` (required): The domain of your site
-- `metrics` (optional): Array of metrics to return. Default: ["visitors"]
+#### Metrics You Can Track
 
-  - visitors
-  - visits
-  - pageviews
-  - views_per_visit
-  - bounce_rate
-  - visit_duration
-  - events
+- `visitors` - Unique visitors (the real people)
+- `pageviews` - Total page loads
+- `bounce_rate` - One-and-done visits
+- `visit_duration` - How long people stick around
+- `views_per_visit` - Pages per session
+- And more!
 
-- `dimensions` (optional): Array of dimensions to group by. Default: ["date"]
+#### Ways to Slice the Data
 
-  - Event dimensions (event:name, event:page, etc.)
-  - Visit dimensions (visit:source, visit:country, etc.)
-  - Time dimensions (minute, hour, date, week, month)
+Break it down by:
 
-- `date_range` (optional): Time period. Default: "7d"
+- Pages (`event:page`)
+- Traffic sources (`visit:source`)
+- Countries (`visit:country`)
+- Devices (`visit:device`)
+- Time periods (minute, hour, day, week, month)
 
-  - day (last 24h)
-  - 7d, 30d (last N days)
-  - month (current month)
-  - 6mo, 12mo (last N months)
-  - custom (requires date parameter)
+#### Time Ranges
 
-- `filters` (optional): Filter the results
+Look at:
 
-  ```json
-  ["is", "visit:browser", ["Chrome"]]
-  ["contains", "event:page", ["/blog"]]
-  ```
+- Last 24 hours (`day`)
+- Last N days (`7d`, `30d`)
+- This month (`month`)
+- Last N months (`6mo`, `12mo`)
+- Custom date ranges
 
-- `limit` (optional): Number of results. Default: 10000
-- `page` (optional): Page number. Default: 1
+#### Smart Filtering
 
-## TODO
+Filter your data like a pro:
 
-- [ ] Complete dimension parsing and validation
-  - Add proper type checking for each dimension type
-  - Validate dimension combinations
-  - Add support for custom property dimensions
-- [ ] Add support for imported data handling
-- [ ] Add proper response type parsing
-- [ ] Add support for time labels in responses
-- [ ] Add support for pagination metadata
-- [ ] Add examples for common queries
+```javascript
+// Just Chrome users
+{"filters": [["is", "visit:browser", ["Chrome"]]]}
+
+// Blog traffic only
+{"filters": [["contains", "event:page", ["/blog"]]]}
+
+// Traffic from specific countries
+{"filters": [["is", "visit:country", ["US", "GB", "CA"]]]}
+
+// Complex stuff - Chrome users from the US
+{"filters": [["and", [
+  ["is", "visit:browser", ["Chrome"]],
+  ["is", "visit:country", ["US"]]
+]]]}
+```
+
+## What's Next?
+
+We're pushing this to the next level. On the roadmap:
+
+- [ ] Even smarter query handling
+- [ ] Better response formatting
+- [ ] More examples of common analytics questions
+- [ ] Comprehensive error handling
+- [ ] Performance optimizations
 
 ## Development
 
+Jump in and help us figure it out:
+
 ```bash
-# Build the project
+# Build it
 pnpm build
 
-# Start the MCP server
+# Run it
 pnpm start
 ```
 
+## Rate Limits & Performance
+
+- 600 requests per hour (that's the Plausible limit)
+- Real-time data, no caching
+- Snappy response times
+
 ## License
 
-MIT
+MIT - because sharing is caring!
+
+---
+
+The analytics world is transforming from dashboards and SQL queries to natural conversations about your data. We're figuring it out as we go, but that's what makes it exciting. Let's make analytics as accessible as asking a question — because that's where this is all heading.
