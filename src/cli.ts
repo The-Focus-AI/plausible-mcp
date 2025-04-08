@@ -1,5 +1,5 @@
 import { createInterface } from "readline";
-import { CoreMessage, streamText, experimental_createMCPClient } from "ai";
+import { Message, streamText, experimental_createMCPClient } from "ai";
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { execSync } from "child_process";
 
@@ -38,9 +38,9 @@ export async function getOpenRouterKey() {
 
 // Main CLI loop
 async function startCLI() {
-  const messages: CoreMessage[] = [];
+  const messages: Message[] = [];
   // Add system prompt to message history
-  messages.push({ role: "system", content: systemPrompt });
+  messages.push({ role: "system", content: systemPrompt, id: "system" });
 
   try {
     const apiKey = await getOpenRouterKey();
@@ -62,7 +62,9 @@ async function startCLI() {
           return;
         }
 
-        await processQuery(query, messages, apiKey);
+        const steps = [];
+
+        await processQuery(query, messages, apiKey,steps);
         promptUser();
       });
     };

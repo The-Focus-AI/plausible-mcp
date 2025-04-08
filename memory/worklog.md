@@ -77,4 +77,22 @@ Started transition from dotenv-based environment variable management to exclusiv
 - Define TypeScript interfaces for tool calls and results
 - Update helper function with proper type annotations
 - Add comprehensive error handling
-- Re-run tests to verify fixes 
+- Re-run tests to verify fixes
+
+## Tue Apr 8 08:14:54 EDT 2025
+
+### API Documentation Improvements
+
+**Summary**: Updated the Plausible Analytics API documentation to match official specifications exactly.
+
+**Accomplishments**:
+- Fixed time dimension formats to use correct `time:` prefix (e.g., `time:day`, `time:hour`)
+- Updated dimension descriptions to be more accurate
+- Corrected default dimension from 'date' to 'time:day'
+- Improved example queries to use correct dimension formats
+- Added note about time dimension restrictions and usage
+
+**Decisions**:
+- Strictly follow Plausible API documentation format for all dimensions
+- Use `time:day` as the standard default dimension instead of 'date'
+- Maintain comprehensive examples that showcase proper dimension usage 

@@ -1,65 +1,51 @@
-# Active Context - Mon Mar 31 06:54:56 EDT 2025
+# Active Context - Tue Apr 8 08:14:54 EDT 2025
 
 ## Current Focus
-Removing environment variable dependencies and transitioning fully to 1Password for secret management.
+Improving API documentation accuracy and aligning with official Plausible Analytics specifications.
 
 ## What's Being Worked On
-- Removing dotenv package and all related code
-- Ensuring 1Password integration handles all secret management
-- Maintaining existing functionality while removing .env dependencies
+- Ensuring all API documentation matches official Plausible specifications
+- Updating dimension formats and descriptions
+- Improving example queries
+- Standardizing time dimension usage
 
 ## Current Status
-- Successfully removed dotenv package
-- Identified references to dotenv and .env files across the codebase
-- Need to update multiple files to remove environment variable usage:
-  - src/server.ts
-  - src/cli.ts
-  - src/utils/apiLogger.ts
-  - tests/apiLogger.test.ts
-- The traffic analytics tests are currently failing due to type issues in the `findLastTrafficToolCall` helper function. The main issues are:
-  1. Type safety issues with accessing properties on untyped objects
-  2. Spread operator usage on potentially undefined objects
-  3. Property access on 'never' typed objects
+- Successfully updated time dimension formats to use correct `time:` prefix
+- Changed default dimension from 'date' to 'time:day'
+- Improved example queries to demonstrate proper dimension usage
+- Added clearer documentation about time dimension restrictions
 
 ## Next Steps
-1. Update server.ts to remove dotenv configuration
-2. Modify cli.ts to use 1Password exclusively
-3. Update apiLogger.ts to handle debug flags without environment variables
-4. Update tests to reflect new configuration approach
-5. Update documentation to remove .env references
-6. Define proper TypeScript interfaces for tool calls and results
-7. Update the helper function with proper type annotations
-8. Add null checks and error handling
-9. Re-run tests to verify fixes
+1. Review and update any remaining documentation inconsistencies
+2. Verify all example queries use correct dimension formats
+3. Add more specialized examples showcasing time dimension combinations
+4. Update tests to reflect correct dimension usage
+5. Create additional examples for complex time-based queries
 
 ## Blockers
-- Need to properly type the tool call and tool result objects
-- Need to handle potential undefined cases more robustly
+None currently identified
 
 ## Recent Decisions
-- Decision to use 1Password exclusively for secret management
-- Removal of dotenv package to simplify dependency management
-- Commitment to maintain existing robust error handling during transition
-- Identified that the helper function needs to be rewritten with proper TypeScript types
-- Current implementation is too permissive with types and needs stricter type checking
-- Need to ensure compatibility with both 'get_traffic' and 'mcp_plausible_mcp_get_breakdown' tool names
+- Strict adherence to Plausible API documentation format
+- Use of `time:day` as standard default dimension
+- Comprehensive example updates to show proper dimension usage
+- Improved clarity on time dimension restrictions
 
 ## Active Decisions
 
-### Testing Strategy
+### Documentation Standards
 
-✅ Unit tests complete with 100% coverage
-✅ Integration tests verified
-✅ Error handling confirmed
-✅ Pagination functionality tested
-[-] Documentation in progress
+✅ Time dimension format standardization
+✅ Example query updates
+✅ Dimension description accuracy
+[-] Additional specialized examples
 
 ### Implementation Approach
 
-- Maintain high test coverage
-- Focus on user documentation
-- Improve response formatting
-- Add more real-world examples
+- Maintain strict alignment with official API docs
+- Focus on clear, accurate examples
+- Improve documentation clarity
+- Add more real-world use cases
 
 ## Current Chunk
 
