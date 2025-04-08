@@ -5,6 +5,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import dotenv from "dotenv";
 import { execSync } from "child_process";
+import { TimeRange, Metric, processTimeRange, convertMetrics } from './types';
 
 // Load environment variables
 dotenv.config();
@@ -99,7 +100,7 @@ server.tool(
     "3. Visitor count by country:\n" +
     '   {"site_id": "example.com", "metrics": ["visitors"], "dimensions": ["visit:country"], "date_range": "month"}\n\n' +
     "4. Daily visitor trend:\n" +
-    '   {"site_id": "example.com", "metrics": ["visitors"], "dimensions": ["date"], "date_range": "30d"}\n\n' +
+    '   {"site_id": "example.com", "metrics": ["visitors"], "dimensions": ["time:day"], "date_range": "30d"}\n\n' +
     "5. Pages with highest bounce rate:\n" +
     '   {"site_id": "example.com", "metrics": ["bounce_rate"], "dimensions": ["event:page"], "date_range": "month", "limit": 10}\n\n' +
     "AVAILABLE METRICS:\n" +
@@ -226,6 +227,215 @@ server.tool(
       const data = await response.json();
       return {
         content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: error instanceof Error ? error.message : "Unknown error",
+          },
+        ],
+        isError: true,
+      };
+    }
+  }
+);
+
+// New tool for analyzing specific pages
+server.tool(
+  "analyze_page",
+  "Get detailed analytics for a specific page",
+  {
+    site_id: z.string().describe("Your website domain"),
+    page: z.string().describe("Page path (e.g. '/blog/post-1')"),
+    timeRange: TimeRange,
+    include: z.array(Metric).default(['visitors', 'pageviews', 'avg_time'])
+  },
+  async (params) => {
+    try {
+      const key = await getApiKey();
+      const timeRange = processTimeRange(params.timeRange);
+      const metrics = convertMetrics(params.include);
+
+      // First query: Get basic metrics for the page
+      const basicMetricsResponse = await fetch(`${PLAUSIBLE_API_URL}/v2/query`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${key}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          site_id: params.site_id,
+          metrics,
+          date_range: timeRange.plausibleFormat,
+          filters: [["is", "event:page", [params.page]]]
+        }),
+      });
+
+      if (!basicMetricsResponse.ok) {
+        throw new Error(
+          `Plausible API error (${basicMetricsResponse.status}): ${await basicMetricsResponse.text()}`
+        );
+      }
+
+      const basicMetrics = await basicMetricsResponse.json();
+
+      // If referrers are requested, get top referrers
+      let referrers = null;
+      if (params.include.includes('visitors')) {
+        const referrersResponse = await fetch(`${PLAUSIBLE_API_URL}/v2/query`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${key}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            site_id: params.site_id,
+            metrics: ["visitors"],
+            dimensions: ["visit:source"],
+            date_range: timeRange.plausibleFormat,
+            filters: [["is", "event:page", [params.page]]],
+            limit: 10
+          }),
+        });
+
+        if (referrersResponse.ok) {
+          referrers = await referrersResponse.json();
+        }
+      }
+
+      // If countries are requested, get country breakdown
+      let countries = null;
+      if (params.include.includes('visitors')) {
+        const countriesResponse = await fetch(`${PLAUSIBLE_API_URL}/v2/query`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${key}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            site_id: params.site_id,
+            metrics: ["visitors"],
+            dimensions: ["visit:country"],
+            date_range: timeRange.plausibleFormat,
+            filters: [["is", "event:page", [params.page]]],
+            limit: 10
+          }),
+        });
+
+        if (countriesResponse.ok) {
+          countries = await countriesResponse.json();
+        }
+      }
+
+      // Format the response
+      const response = {
+        page: params.page,
+        period: {
+          start: timeRange.start,
+          end: timeRange.end
+        },
+        metrics: basicMetrics.results[0]?.metrics || [],
+        referrers: referrers?.results || [],
+        countries: countries?.results || []
+      };
+
+      return {
+        content: [{ type: "text", text: JSON.stringify(response, null, 2) }],
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: error instanceof Error ? error.message : "Unknown error",
+          },
+        ],
+        isError: true,
+      };
+    }
+  }
+);
+
+// Register traffic analytics tool with structured parameters
+server.tool(
+  "get_traffic",
+  "Get traffic analytics for a site using structured parameters",
+  {
+    site_id: z.string().describe("The website domain to analyze (e.g., 'example.com')"),
+    time_range: z.enum([
+      'day',      // Last 24 hours
+      '7d',       // Last 7 days
+      '30d',      // Last 30 days
+      'month',    // Current month
+      '6mo',      // Last 6 months
+      '12mo'      // Last 12 months
+    ]).default('7d').describe("Time period to analyze"),
+    metrics: z.array(z.enum([
+      'visitors',         // Number of unique visitors
+      'pageviews',       // Number of pageview events
+      'bounce_rate',     // Percentage of visits with only one page view
+      'visit_duration',  // Average visit duration in seconds
+      'views_per_visit', // Average number of pages viewed per visit
+      'events'          // Total number of events
+    ])).default(['visitors', 'pageviews']).describe("Metrics to calculate"),
+    dimensions: z.array(z.enum([
+      'time:day',           // Group by day
+      'time:month',         // Group by month
+      'visit:source',       // Traffic source
+      'visit:device',       // Device type
+      'visit:browser',      // Browser name
+      'visit:country',      // Country of visitor
+      'visit:region',       // Region/state
+      'event:page',         // Page URL
+      'event:page.pathname' // Page path
+    ])).default(['visit:source']).describe("Properties to group results by"),
+    filters: z.array(z.array(z.union([z.string(), z.array(z.string())]))).optional()
+      .describe("Filter conditions to apply (e.g., [['is', 'visit:country', ['US']]])"),
+  },
+  async (params) => {
+    try {
+      const key = await getApiKey();
+
+      // Make API request with structured parameters
+      const response = await fetch(`${PLAUSIBLE_API_URL}/v2/query`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${key}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          site_id: params.site_id,
+          metrics: params.metrics,
+          dimensions: params.dimensions,
+          date_range: params.time_range,
+          filters: params.filters || []
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(
+          `Plausible API error (${response.status}): ${errorText}`
+        );
+      }
+
+      const data = await response.json();
+
+      // Format response in a structured way
+      const formattedResponse = {
+        site: params.site_id,
+        period: params.time_range,
+        metrics: data.results[0]?.metrics || {},
+        trends: data.results || []
+      };
+
+      return {
+        content: [{ 
+          type: "text", 
+          text: JSON.stringify(formattedResponse, null, 2)
+        }],
       };
     } catch (error) {
       return {
